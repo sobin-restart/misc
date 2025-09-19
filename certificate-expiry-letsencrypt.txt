@@ -1,0 +1,45 @@
+Check if the Server is Even There 
+
+nslookup vc.mararipeterland.com
+=========================
+
+Test Basic Connectivity
+
+telnet vc.mararipeterland.com 443
+========================
+
+Get the Raw SSL Connection Info 
+
+openssl s_client -servername vc.mararipeterland.com -connect vc.mararipeterland.com:443 -verify_return_error
+========================
+
+Let's Get the Full SSL Story
+
+echo | openssl s_client -connect 80.225.228.174:443 -servername vc.mararipeterland.com
+
+============================
+
+Extract Just the Certificate Dates 
+
+echo | openssl s_client -connect 80.225.228.174:443 -servername vc.mararipeterland.com 2>/dev/null | openssl x509 -noout -dates
+===========================
+
+Use nginx webroot method (no downtime):
+
+sudo certbot renew --nginx --cert-name vc.mararipeterland.com
+
+============
+renew all expired certificates without stopping nginx
+
+sudo certbot renew --nginx
+=========================
+
+enable auto renew
+
+sudo certbot renew --dry-run --nginx
+
+/*
+Your auto-renewal is already configured. The renewal failure happened because the timer couldn't bind to port 80
+ - but now that you've renewed manually, future renewals should work with the --nginx flag.
+*/
+=====================
