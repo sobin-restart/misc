@@ -1,0 +1,136 @@
+
+
+
+
+
+sudo vi /etc/prometheus/prometheus.yml
+
+sudo promtool check config /etc/prometheus/prometheus.yml
+
+sudo promtool check rules /etc/prometheus/rules/alerts.yml
+
+sudo systemctl restart prometheus
+
+=====================================
+
+
+PromQLs
+
+CPU usage % (per core averaged over 5m):
+=========
+
+100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+OR
+avg by (instance) (rate(node_cpu_seconds_total{mode!="idle"}[15m])) * 100
+=====
+
+with variable - select vm from dropdown
+----------------------
+Create a Variable
+
+In Grafana → open your dashboard
+
+Click ⚙️ (Dashboard settings) → Variables → Add variable
+
+Name: instance
+
+Type: Query
+
+Data source: Prometheus
+
+Query:
+
+label_values(node_cpu_seconds_total, instance)
+
+
+👉 This fetches all instance labels from Prometheus (e.g., vm1:9100, vm2:9100).
+
+100 * (1 - (node_memory_MemAvailable_bytes{instance=~"$instance"} 
+             / node_memory_MemTotal_bytes{instance=~"$instance"}))
+
+
+====================
+Memory available (MB):
+=======
+node_memory_MemAvailable_bytes / 1024 / 1024
+
+Memory usage per host
+===========
+100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))
+
+
+Root filesystem usage %:
+=========
+100 * (1 - node_filesystem_free_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})
+		  
+================
+Max CPU usage per VM (who’s working hardest?): in % 
+
+max by (instance) (100 - (rate(node_cpu_seconds_total{mode="idle"}[5m]) * 100))
+======================
+Small but important ops tips
+
+Firewall/security groups: allow TCP 9100 only from your Prometheus VM(s).
+
+Version pinning: Use a specific tag (e.g., v1.8.2) for Docker and a fixed binary version on systemd hosts.
+
+Consistency: Try to keep similar exporter flags across VMs (e.g., filesystem excludes) so dashboards behave the same.
+=======================
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+  
+ content - see below(no need to start with --- ?) yml?
+================
+
+===============================================
+ nginx -exporter
+ nginx-prometheus-exporter will run on port 9113 on the host. 
+ ========
+ 
+version: "3.8"
+services:
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:0.11.0
+    container_name: nginx_exporter
+    restart: unless-stopped
+    network_mode: host
+    # nginx-prometheus-exporter will run on port 9113
+    command:
+      - -nginx.scrape-uri=http://127.0.0.1:8081/nginx_status
+    # No ports section needed with host networking
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+		  
+=======
+/etc/nginx/sites-enabled/default
+
+server {
+    listen 8081;   # Or another port not exposed to the internet
+    location /nginx_status {
+        stub_status on;
+        allow 127.0.0.1;    # Allow only localhost
+        deny all;
+    }
+}
+		  
+===============
+Queries
+
+nginx_connections_active
+
+rate(nginx_http_requests_total[5m])
+
+nginx_connections_reading
+
+nginx_connections_writing
+
+nginx_connections_waiting
+====================
+blackbox troubleshooting
+
+curl -s "http://localhost:9115/probe?target=https://jenkins.mararipeterland.com&module=http_2xx_strict" | grep probe_success
+
+		  
