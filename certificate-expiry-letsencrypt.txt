@@ -43,3 +43,63 @@ Your auto-renewal is already configured. The renewal failure happened because th
  - but now that you've renewed manually, future renewals should work with the --nginx flag.
 */
 =====================
+
+Create certificates only
+
+sudo certbot certonly --nginx -d am.mararipeterland.com
+
+=================================
+
+# Check if timer exists
+sudo systemctl status certbot.timer
+
+# See when it runs next
+sudo systemctl list-timers certbot.timer
+
+# Test if auto-renewal will work
+sudo certbot renew --dry-run
+
+# Force renewal now (if needed)
+sudo certbot renew --force-renewal
+
+# Get new certificate
+sudo certbot --nginx -d newsite.com
+
+# See all certificates managed by certbot
+sudo certbot certificates
+==============
+
+# 1. Confirm timer is active and scheduled
+sudo systemctl status certbot.timer
+
+# 2. See EXACTLY when it will run next
+sudo systemctl list-timers certbot.timer
+
+# 3. View ALL certificates certbot knows about
+sudo certbot certificates
+
+# 4. Test renewal process WITHOUT actually renewing
+sudo certbot renew --dry-run
+
+# 5. Check recent renewal attempts
+sudo journalctl -u certbot.service -n 20
+
+===============
+🥇 Nginx Plugin (Your Current Choice)
+sudo certbot --nginx -d domain.com
+Perfect for: Production servers with multiple sites
+
+🥈 Webroot Method
+sudo certbot certonly --webroot -w /var/www/html -d domain.com
+Good for: Custom setups where you want manual control
+Requires: .well-known location blocks
+
+🥉 Standalone Method
+sudo certbot certonly --standalone -d domain.com
+Only for: Testing or servers without web server running
+Problem: Requires stopping Nginx for renewals
+
+Nginx plugin (your choice) - 80% of cases
+Webroot method - 20% for custom setups
+
+=====================================
